@@ -31,7 +31,7 @@ pattern      = None # 0.0 ~ 1.0, None
 dampen       = 0.5  # 0.0 ~ 1.0
 animated     = True
 result_scale = 10
-output_file = ''
+output_file  = ''
 colors = {
     (255, 205,   3): 'Yellow',
     (255, 245, 121): 'Bright Light Yellow',
@@ -295,7 +295,7 @@ def mosaic(image_in, size, colors, dither=1, pattern=None, dampen=0.5, animated=
     return Image.fromarray(image_out[..., :3])
 
 if __name__ == '__main__':
-    print(f'mosaic_{__version__}.py')
+    print(f'mosaic.py ({__version__})')
     input_img = Image.open(input_file)
     input_img.apply_transparency()
     input_img = input_img.convert('RGB')
