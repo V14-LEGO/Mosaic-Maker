@@ -1,12 +1,13 @@
-__version__ = '260902a'
+__version__ = '260903a'
 __author__  = 'Haruka Yamaguchi'
 
 from math import ceil
+from os import remove
 from time import time
 from tkinter import Canvas, Tk
+from zipfile import ZipFile
 
 from colour import (cctf_decoding,
-                    cctf_encoding,
                     Oklab_to_XYZ,
                     sRGB_to_XYZ,
                     XYZ_to_Oklab,
@@ -16,7 +17,6 @@ from numpy import (array,
                    asarray,
                    average,
                    finfo,
-                   hstack,
                    linalg,
                    tile,
                    zeros)
@@ -32,53 +32,55 @@ dampen       = 0.5  # 0.0 ~ 1.0
 animated     = True
 result_scale = 10
 output_file  = ''
+output_io    = ''
 colors = {
-    (255, 205,   3): 'Yellow',
-    (255, 245, 121): 'Bright Light Yellow',
-    (245, 125,  32): 'Orange',
-    (251, 171,  24): 'Bright Light Orange',
-    (221,  26,  33): 'Red',
-    (233,  93, 162): 'Dark Pink',
-    (246, 173, 205): 'Bright Pink',
-    (181,  28, 125): 'Magenta',
-    (127,  19,  27): 'Dark Red',
-    (150, 117, 180): 'Medium Lavender',
-    (188, 166, 208): 'Lavender',
-    ( 76,  47, 146): 'Dark Purple',
-    (  0, 108, 183): 'Blue',
-    ( 72, 158, 206): 'Medium Blue',
-    (120, 191, 234): 'Bright Light Blue',
-    (103, 130, 151): 'Sand Blue',
-    (  0,  57,  94): 'Dark Blue',
-    (  0, 163, 218): 'Dark Azure',
-    (  0, 190, 211): 'Medium Azure',
-    (204, 225, 151): 'Yellowish Green',
-    (193, 228, 218): 'Light Aqua',
-    (  0, 175,  77): 'Bright Green',
-    (111, 148, 122): 'Sand Green',
-    (  0, 146,  71): 'Green',
-    (  0,  74,  45): 'Dark Green',
-    (154, 202,  60): 'Lime',
-    (130, 131,  83): 'Olive Green',
-    (105,  46,  20): 'Reddish Brown',
-    (221, 196, 142): 'Tan',
-    (148, 126,  95): 'Dark Tan',
-    (175, 116,  70): 'Medium Nougat',
-    ( 59,  24,  13): 'Dark Brown',
-    (222, 139,  95): 'Nougat',
-    (252, 195, 158): 'Light Nougat',
-    (166,  83,  34): 'Dark Orange',
-    (244, 244, 244): 'White',
-    (160, 161, 159): 'Light Bluish Gray',
-    (100, 103, 101): 'Dark Bluish Gray',
-    (  0,   0,   0): 'Black',
-##    (230, 237, 207): 'Glow In Dark White',
-##    ( 66,  66,  62): 'Pearl Dark Gray',
-##    (195, 151,  55): 'Pearl Gold',
-##    (135, 141, 143): 'Flat Silver'
+    (  0,   0,   0): {'id':   0, 'name': 'Black'},
+    (  0, 108, 183): {'id':   1, 'name': 'Blue'},
+    (  0, 146,  71): {'id':   2, 'name': 'Green'},
+    (221,  26,  33): {'id':   4, 'name': 'Red'},
+    (233,  93, 162): {'id':   5, 'name': 'Dark Pink'},
+    (  0, 175,  77): {'id':  10, 'name': 'Bright Green'},
+    (255, 205,   3): {'id':  14, 'name': 'Yellow'},
+    (244, 244, 244): {'id':  15, 'name': 'White'},
+    (221, 196, 142): {'id':  19, 'name': 'Tan'},
+    (245, 125,  32): {'id':  25, 'name': 'Orange'},
+    (181,  28, 125): {'id':  26, 'name': 'Magenta'},
+    (154, 202,  60): {'id':  27, 'name': 'Lime'},
+    (148, 126,  95): {'id':  28, 'name': 'Dark Tan'},
+    (246, 173, 205): {'id':  29, 'name': 'Bright Pink'},
+    (150, 117, 180): {'id':  30, 'name': 'Medium Lavender'},
+    (188, 166, 208): {'id':  31, 'name': 'Lavender'},
+    (105,  46,  20): {'id':  70, 'name': 'Reddish Brown'},
+    (160, 161, 159): {'id':  71, 'name': 'Light Bluish Gray'},
+    (100, 103, 101): {'id':  72, 'name': 'Dark Bluish Gray'},
+    ( 72, 158, 206): {'id':  73, 'name': 'Medium Blue'},
+    (252, 195, 158): {'id':  78, 'name': 'Light Nougat'},
+    (175, 116,  70): {'id':  84, 'name': 'Medium Nougat'},
+    ( 76,  47, 146): {'id':  85, 'name': 'Dark Purple'},
+    (222, 139,  95): {'id':  92, 'name': 'Nougat'},
+##    ( 66,  66,  62): {'id': 148, 'name': 'Pearl Dark Gray'},
+##    (135, 141, 143): {'id': 179, 'name': 'Flat Silver'},
+    (251, 171,  24): {'id': 191, 'name': 'Bright Light Orange'},
+    (120, 191, 234): {'id': 212, 'name': 'Bright Light Blue'},
+    (255, 245, 121): {'id': 226, 'name': 'Bright Light Yellow'},
+    (  0,  57,  94): {'id': 272, 'name': 'Dark Blue'},
+    (  0,  74,  45): {'id': 288, 'name': 'Dark Green'},
+##    (195, 151,  55): {'id': 297, 'name': 'Pearl Gold'},
+    ( 59,  24,  13): {'id': 308, 'name': 'Dark Brown'},
+    (127,  19,  27): {'id': 320, 'name': 'Dark Red'},
+    (  0, 163, 218): {'id': 321, 'name': 'Dark Azure'},
+    (  0, 190, 211): {'id': 322, 'name': 'Medium Azure'},
+    (193, 228, 218): {'id': 323, 'name': 'Light Aqua'},
+    (204, 225, 151): {'id': 326, 'name': 'Yellowish Green'},
+##    (230, 237, 207): {'id': 329, 'name': 'Glow In Dark White'},
+    (130, 131,  83): {'id': 330, 'name': 'Olive Green'},
+    (111, 148, 122): {'id': 378, 'name': 'Sand Green'},
+    (103, 130, 151): {'id': 379, 'name': 'Sand Blue'},
+    (166,  83,  34): {'id': 484, 'name': 'Dark Orange'}
 }
 
-def mosaic(image_in, size, colors, dither=1, pattern=None, dampen=0.5, animated=True):
+def mosaic(input_img, size, colors, dither=1.0,
+           pattern=None, dampen=0.5, animated=False):
     
     def rgb2lab(x):
         return XYZ_to_Oklab(sRGB_to_XYZ(x, apply_cctf_decoding=False))
@@ -90,14 +92,14 @@ def mosaic(image_in, size, colors, dither=1, pattern=None, dampen=0.5, animated=
         a, b = [colors[i] for i in line]
         ab = b - a
         ax = x - a
-        d1 = ab @ ax
-        if d1 <= 0:
+        c = ab @ ax
+        if c <= 0:
             return a
         bx = x - b
-        d2 = ab @ bx
-        if d2 >= 0:
+        d = ab @ bx
+        if d >= 0:
             return b
-        return a + ab * d1 / (d1-d2)
+        return a + ab * c / (c-d)
     
     def fit_tri(x, colors, tri=range(3)):
         if len(colors) < 3:
@@ -106,76 +108,46 @@ def mosaic(image_in, size, colors, dither=1, pattern=None, dampen=0.5, animated=
         ab = b - a
         ac = c - a
         ax = x - a
-        d1 = ab @ ax
-        d2 = ac @ ax
-        if d1 <= 0 and d2 <= 0:
+        d = ab @ ax
+        e = ac @ ax
+        if d <= 0 and e <= 0:
             return a
         bx = x - b
-        d3 = ab @ bx
-        d4 = ac @ bx
-        if d3 >= 0 and d4 <= d3:
+        f = ab @ bx
+        g = ac @ bx
+        if f >= 0 and g <= f:
             return b
         cx = x - c
-        d5 = ab @ cx
-        d6 = ac @ cx
-        if d6 >= 0 and d5 <= d6:
+        h = ab @ cx
+        i = ac @ cx
+        if i >= 0 and h <= i:
             return c
-        vc = d1 * d4 - d2 * d3
-        if vc <= 0 and d1 >= 0 and d3 <= 0:
-            return a + ab * d1 / (d1-d3)
-        vb = d2 * d5 - d1 * d6
-        if vb <= 0 and d2 >= 0 and d6 <= 0:
-            return a + ac * d2 / (d2-d6)
-        va = d3 * d6 - d4 * d5
-        if va <= 0 and d4 >= d3 and d6 <= d5:
-            return b + (c-b) * (d4-d3) / (d4-d3-d6+d5)
-        return a + ab * vb / (va+vb+vc) + ac * vc / (va+vb+vc)
+        vc = d * g - e * f
+        if vc <= 0 and d >= 0 and f <= 0:
+            return a + ab * d / (d-f)
+        vb = e * h - d * i
+        if vb <= 0 and e >= 0 and i <= 0:
+            return a + ac * e / (e-i)
+        va = f * i - g * h
+        if va <= 0 and g >= f and i <= h:
+            return b + (c-b) * (g-f) / (g-f-i+h)
+        return a + (ab*vb+ac*vc) / (va+vb+vc)
     
     def fit_hull(x, colors, hull):
         if len(colors) < 4:
             return fit_tri(x, colors)
         test = [*x, 1] @ hull.equations.T - finfo('d').eps
-        if any(test>=0):
-            tris = hull.simplices[test>=0]
-            if len(tris) == 1:
-                return fit_tri(x, colors, tris[0])
-            points = array([fit_tri(x, colors, tri) for tri in tris])
-            return points[linalg.norm(x-points, axis=1).argmin()]
-        else:
+        if all(test<0):
             return x
-    
-    w, h = size
-    sx = ceil(image_in.size[0]/w)
-    sy = ceil(image_in.size[1]/h)
-    image_in = image_in.resize((w*sx, h*sy))
-    image_rgb = cctf_decoding(asarray(image_in)/255)
-    A = zeros((h, w, 3))
-    B = zeros((h, w, 3))
-    C = zeros((h+1, w+1, 3))
-    D = zeros((h+1, w+1, 3))
-    E = zeros((h+2, w+2, 3))
-    F = zeros((h, w, 3))
-    image_out = tile(array([255, 0, 255, 0], dtype='B'), (h, w, 1))
-    image_out[0, 0, 3] = 255
-    if len(colors) > 1:
-        colors_rgb = cctf_decoding(asarray(colors)/255)
-        colors_lab = rgb2lab(colors_rgb)
-        tree_rgb = KDTree(colors_rgb)
-        tree_lab = KDTree(colors_lab)
-        hull_rgb = ConvexHull(colors_rgb) if len(colors) > 3 else None
-        hull_lab = ConvexHull(colors_lab) if len(colors) > 3 else None
-    if pattern is None:
-        pattern = dither
-    bayer = array([[[ 3/3, -3/3, -1/3], [-1/3,  3/3, -1/3]],
-                   [[-1/3,  3/3, -1/3], [-1/3, -3/3,  3/3]]])
-    floyd_steinberg = {(0,  1): 7/16,
-                       (1, -1): 3/16,
-                       (1,  0): 5/16,
-                       (1,  1): 1/16}
+        tris = hull.simplices[test>=0]
+        if len(tris) == 1:
+            return fit_tri(x, colors, tris[0])
+        points = array([fit_tri(x, colors, tri) for tri in tris])
+        return points[linalg.norm(x-points, axis=1).argmin()]
     
     def scan0(y, x):
         if y < h and x < w:
-            G = image_rgb[y*sy:(y+1)*sy, x*sx:(x+1)*sx]
+            G = input_arr[y*sy:(y+1)*sy, x*sx:(x+1)*sx]
             A[y, x] = average(G, axis=(0, 1))
             B[y, x] = average(G**2, axis=(0, 1))
             if y > 0 and x > 0:
@@ -215,45 +187,67 @@ def mosaic(image_in, size, colors, dither=1, pattern=None, dampen=0.5, animated=
             if x == w:
                 E[h+1, w+1] = E[h, w]
     
+    bayer = array([[[ 3/3, -3/3, -1/3], [-1/3,  3/3, -1/3]],
+                   [[-1/3,  3/3, -1/3], [-1/3, -3/3,  3/3]]])
+    
+    floyd_steinberg = {(0,  1): 7/16,
+                       (1, -1): 3/16,
+                       (1,  0): 5/16,
+                       (1,  1): 1/16}
+    
     def scan1(y, x):
         if len(colors) == 0:
             return
         if len(colors) == 1:
-            image_out[y, x, :3] = colors[0]
+            output_arr[y, x, :3] = colors[0]
             return
-        if x == 0:
-            if y == 0:
-                scan0(0, 0)
-                scan0(0, 1)
-                scan0(1, 0)
-                scan0(1, 1)
-            scan0(y+2, 0)
-            scan0(y+2, 1)
-        if y == 0:
-            scan0(0, x+2)
-            scan0(1, x+2)
-        scan0(y+2, x+2)
+        for i in (y+2,) if y else range(3):
+            for j in (x+2,) if x else range(3):
+                scan0(i, j)
         F[y, x] += E[y+1, x+1]
         if pattern > 0:
-            l = E[y+1, x+1] * 9 - E[y:y+3, x:x+3].sum(axis=(0, 1))
-            p = max((1-l@l/14.4)*0.05, 0)
-            p = min(hstack((E[y+1, x+1], 1-E[y+1, x+1], p)))
-            F[y, x] += bayer[y%2, x%2] * p * pattern
+            m = E[y+1, x+1] * 9 - E[y:y+3, x:x+3].sum(axis=(0, 1))
+            n = min(max((1-m@m/14.4)*0.05, 0), *E[y+1, x+1], *(1-E[y+1, x+1]))
+            F[y, x] += bayer[y%2, x%2] * n * pattern
         if dither >= 1:
             i = tree_rgb.query(F[y, x])[1]
         else:
             i = tree_lab.query(rgb2lab(F[y, x]))[1]
             if dither > 0:
-                i = tree_rgb.query(F[y, x] * dither + colors_rgb[i] * (1 - dither))[1]
-        image_out[y, x, :3] = colors[i]
+                i = tree_rgb.query(F[y, x]*dither+colors_rgb[i]*(1-dither))[1]
+        output_arr[y, x, :3] = colors[i]
         if dampen > 0:
             F[y, x] += (fit_hull(F[y, x], colors_rgb, hull_rgb)-F[y, x]) * dampen
-        e = F[y, x] - colors_rgb[i]
-        for (dy, dx), a in floyd_steinberg.items():
+        o = F[y, x] - colors_rgb[i]
+        for (dy, dx), p in floyd_steinberg.items():
             if y + dy < 0 or y + dy >= h or x + dx < 0 or x + dx >= w:
                 continue
-            F[y+dy, x+dx] += e * a * dither
+            F[y+dy, x+dx] += o * p * dither
     
+    input_img.apply_transparency()
+    input_img = input_img.convert('RGB')
+    w, h = size
+    sx = ceil(input_img.size[0]/w)
+    sy = ceil(input_img.size[1]/h)
+    input_img = input_img.resize((w*sx, h*sy))
+    if len(colors) > 1:
+        colors_rgb = cctf_decoding(asarray(colors)/255)
+        colors_lab = rgb2lab(colors_rgb)
+        tree_rgb = KDTree(colors_rgb)
+        tree_lab = KDTree(colors_lab)
+        hull_rgb = ConvexHull(colors_rgb) if len(colors) > 3 else None
+        hull_lab = ConvexHull(colors_lab) if len(colors) > 3 else None
+    if pattern is None:
+        pattern = dither
+    input_arr = cctf_decoding(asarray(input_img)/255)
+    A = zeros((h  , w  , 3))
+    B = zeros((h  , w  , 3))
+    C = zeros((h+1, w+1, 3))
+    D = zeros((h+1, w+1, 3))
+    E = zeros((h+2, w+2, 3))
+    F = zeros((h  , w  , 3))
+    output_arr = tile(array([255, 0, 255, 0], dtype='B'), (h, w, 1))
+    output_arr[0, 0, 3] = 255
     if animated:
         root = Tk()
         root.state('zoomed')
@@ -264,15 +258,15 @@ def mosaic(image_in, size, colors, dither=1, pattern=None, dampen=0.5, animated=
                         width=root.winfo_screenwidth())
         canvas.pack()
         root.update()
-        factor = min(canvas.winfo_width()/w, canvas.winfo_height()/h)
-        img = image_in.resize((round(w*factor), round(h*factor)), resample=0)
-        x = (canvas.winfo_width()-img.width) // 2
-        y = (canvas.winfo_height()-img.height) // 2
-        tkimg = ImageTk.PhotoImage(img)
-        canvas.create_image(x, y, image=tkimg, anchor='nw')
-        img2 = Image.fromarray(image_out).resize((img.width, img.height), resample=0)
-        tkimg2 = ImageTk.PhotoImage(img2)
-        id2 = canvas.create_image(x, y, image=tkimg2, anchor='nw')
+        s = min(canvas.winfo_width()/w, canvas.winfo_height()/h)
+        img0 = input_img.resize((round(w*s), round(h*s)), resample=0)
+        x = (canvas.winfo_width()-img0.width) // 2
+        y = (canvas.winfo_height()-img0.height) // 2
+        tkimg0 = ImageTk.PhotoImage(img0)
+        canvas.create_image(x, y, image=tkimg0, anchor='nw')
+        img1 = Image.fromarray(output_arr).resize(img0.size, resample=0)
+        tkimg1 = ImageTk.PhotoImage(img1)
+        id1 = canvas.create_image(x, y, image=tkimg1, anchor='nw')
         i = 0
         t = time()
     for y in range(h):
@@ -281,31 +275,61 @@ def mosaic(image_in, size, colors, dither=1, pattern=None, dampen=0.5, animated=
             if not animated:
                 continue
             if x < w - 1:
-                image_out[y, x+1, 3] = 255
+                output_arr[y, x+1, 3] = 255
             elif y < h - 1:
-                image_out[y+1, 0, 3] = 255
+                output_arr[y+1, 0, 3] = 255
             if i > (time() - t) * 300:
-                img2 = Image.fromarray(image_out).resize((img.width, img.height), resample=0)
-                tkimg2 = ImageTk.PhotoImage(img2)
-                canvas.itemconfig(id2, image=tkimg2)
+                img1 = Image.fromarray(output_arr).resize(img0.size, resample=0)
+                tkimg1 = ImageTk.PhotoImage(img1)
+                canvas.itemconfig(id1, image=tkimg1)
                 root.update()
             i += 1
     if animated:
         root.destroy()
-    return Image.fromarray(image_out[..., :3])
+    return Image.fromarray(output_arr[..., :3])
+
+def save_studio(filename, img, part='plate'):
+    w, h = img.size
+    z = h // 2 * 20 - 10
+    match part:
+        case 'plate':
+            part_id = '3024'
+    with open('model.ldr', 'wb') as f:
+        for i in range(h):
+            x = 10 - w // 2 * 20
+            for j in range(w):
+                color_id = colors[img.getpixel((j, i))]['id']
+                f.write((f'1 {color_id} {x} -12 {z} 1 0 0 0 1 0 0 0 1 '
+                         f'{part_id}.dat\r\n').encode())
+                x += 20
+            z -= 20
+    img.save('thumbnail.png')
+    with ZipFile(filename, 'w') as f:
+        f.write('model.ldr')
+        f.write('thumbnail.png')
+    remove('model.ldr')
+    remove('thumbnail.png')
 
 if __name__ == '__main__':
     print(f'mosaic.py ({__version__})')
     input_img = Image.open(input_file)
-    input_img.apply_transparency()
-    input_img = input_img.convert('RGB')
-    output_img = mosaic(input_img, (width, height), list(colors), dither=dither, pattern=pattern, dampen=dampen, animated=animated)
+    output_img = mosaic(input_img,
+                        (width, height),
+                        list(colors),
+                        dither=dither,
+                        pattern=pattern,
+                        dampen=dampen,
+                        animated=animated)
     if output_file:
         if '.' not in output_file:
             output_file += '.png'
         output_img.save(output_file)
+    if output_io:
+        if output_io[-3:] != '.io':
+            output_io += '.io'
+        save_studio(output_io, output_img)
     if result_scale > 0:
         output_img.resize((width*result_scale, height*result_scale), resample=0).show()
     for color in colors:
         i = (asarray(output_img).reshape((width*height, 3))==color).all(axis=1).sum()
-        print(f'{colors[color]:<20}x{i}')
+        print(f'{colors[color]["name"]:<20}x{i}')
