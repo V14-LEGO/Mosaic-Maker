@@ -1,4 +1,4 @@
-__version__ = '260903a'
+__version__ = '261108a'
 __author__  = 'Haruka Yamaguchi'
 
 from math import ceil
@@ -12,7 +12,8 @@ from colour import (cctf_decoding,
                     sRGB_to_XYZ,
                     XYZ_to_Oklab,
                     XYZ_to_sRGB)
-from numpy import (array,
+from numpy import (all,
+                   array,
                    array_equal,
                    asarray,
                    average,
@@ -34,49 +35,49 @@ result_scale = 10
 output_file  = ''
 output_io    = ''
 colors = {
-    (  0,   0,   0): {'id':   0, 'name': 'Black'},
-    (  0, 108, 183): {'id':   1, 'name': 'Blue'},
-    (  0, 146,  71): {'id':   2, 'name': 'Green'},
-    (221,  26,  33): {'id':   4, 'name': 'Red'},
-    (233,  93, 162): {'id':   5, 'name': 'Dark Pink'},
-    (  0, 175,  77): {'id':  10, 'name': 'Bright Green'},
-    (255, 205,   3): {'id':  14, 'name': 'Yellow'},
-    (244, 244, 244): {'id':  15, 'name': 'White'},
-    (221, 196, 142): {'id':  19, 'name': 'Tan'},
-    (245, 125,  32): {'id':  25, 'name': 'Orange'},
-    (181,  28, 125): {'id':  26, 'name': 'Magenta'},
-    (154, 202,  60): {'id':  27, 'name': 'Lime'},
-    (148, 126,  95): {'id':  28, 'name': 'Dark Tan'},
-    (246, 173, 205): {'id':  29, 'name': 'Bright Pink'},
-    (150, 117, 180): {'id':  30, 'name': 'Medium Lavender'},
-    (188, 166, 208): {'id':  31, 'name': 'Lavender'},
-    (105,  46,  20): {'id':  70, 'name': 'Reddish Brown'},
-    (160, 161, 159): {'id':  71, 'name': 'Light Bluish Gray'},
-    (100, 103, 101): {'id':  72, 'name': 'Dark Bluish Gray'},
-    ( 72, 158, 206): {'id':  73, 'name': 'Medium Blue'},
-    (252, 195, 158): {'id':  78, 'name': 'Light Nougat'},
-    (175, 116,  70): {'id':  84, 'name': 'Medium Nougat'},
-    ( 76,  47, 146): {'id':  85, 'name': 'Dark Purple'},
-    (222, 139,  95): {'id':  92, 'name': 'Nougat'},
-##    ( 66,  66,  62): {'id': 148, 'name': 'Pearl Dark Gray'},
-##    (135, 141, 143): {'id': 179, 'name': 'Flat Silver'},
-    (251, 171,  24): {'id': 191, 'name': 'Bright Light Orange'},
-    (120, 191, 234): {'id': 212, 'name': 'Bright Light Blue'},
-    (255, 245, 121): {'id': 226, 'name': 'Bright Light Yellow'},
-    (  0,  57,  94): {'id': 272, 'name': 'Dark Blue'},
-    (  0,  74,  45): {'id': 288, 'name': 'Dark Green'},
-##    (195, 151,  55): {'id': 297, 'name': 'Pearl Gold'},
-    ( 59,  24,  13): {'id': 308, 'name': 'Dark Brown'},
-    (127,  19,  27): {'id': 320, 'name': 'Dark Red'},
-    (  0, 163, 218): {'id': 321, 'name': 'Dark Azure'},
-    (  0, 190, 211): {'id': 322, 'name': 'Medium Azure'},
-    (193, 228, 218): {'id': 323, 'name': 'Light Aqua'},
-    (204, 225, 151): {'id': 326, 'name': 'Yellowish Green'},
-##    (230, 237, 207): {'id': 329, 'name': 'Glow In Dark White'},
-    (130, 131,  83): {'id': 330, 'name': 'Olive Green'},
-    (111, 148, 122): {'id': 378, 'name': 'Sand Green'},
-    (103, 130, 151): {'id': 379, 'name': 'Sand Blue'},
-    (166,  83,  34): {'id': 484, 'name': 'Dark Orange'}
+      0: {'rgb': (  0,   0,   0), 'name': 'Black'              },
+      1: {'rgb': (  0, 108, 183), 'name': 'Blue'               },
+      2: {'rgb': (  0, 146,  71), 'name': 'Green'              },
+      4: {'rgb': (221,  26,  33), 'name': 'Red'                },
+      5: {'rgb': (233,  93, 162), 'name': 'Dark Pink'          },
+     10: {'rgb': (  0, 175,  77), 'name': 'Bright Green'       },
+     14: {'rgb': (255, 205,   3), 'name': 'Yellow'             },
+     15: {'rgb': (244, 244, 244), 'name': 'White'              },
+     19: {'rgb': (221, 196, 142), 'name': 'Tan'                },
+     25: {'rgb': (245, 125,  32), 'name': 'Orange'             },
+     26: {'rgb': (181,  28, 125), 'name': 'Magenta'            },
+     27: {'rgb': (154, 202,  60), 'name': 'Lime'               },
+     28: {'rgb': (148, 126,  95), 'name': 'Dark Tan'           },
+     29: {'rgb': (246, 173, 205), 'name': 'Bright Pink'        },
+     30: {'rgb': (150, 117, 180), 'name': 'Medium Lavender'    },
+     31: {'rgb': (188, 166, 208), 'name': 'Lavender'           },
+     70: {'rgb': (105,  46,  20), 'name': 'Reddish Brown'      },
+     71: {'rgb': (160, 161, 159), 'name': 'Light Bluish Gray'  },
+     72: {'rgb': (100, 103, 101), 'name': 'Dark Bluish Gray'   },
+     73: {'rgb': ( 72, 158, 206), 'name': 'Medium Blue'        },
+     78: {'rgb': (252, 195, 158), 'name': 'Light Nougat'       },
+     84: {'rgb': (175, 116,  70), 'name': 'Medium Nougat'      },
+     85: {'rgb': ( 76,  47, 146), 'name': 'Dark Purple'        },
+     92: {'rgb': (222, 139,  95), 'name': 'Nougat'             },
+    148: {'rgb': ( 66,  66,  62), 'name': 'Pearl Dark Gray'    },
+    179: {'rgb': (135, 141, 143), 'name': 'Flat Silver'        },
+    191: {'rgb': (251, 171,  24), 'name': 'Bright Light Orange'},
+    212: {'rgb': (120, 191, 234), 'name': 'Bright Light Blue'  },
+    226: {'rgb': (255, 245, 121), 'name': 'Bright Light Yellow'},
+    272: {'rgb': (  0,  57,  94), 'name': 'Dark Blue'          },
+    288: {'rgb': (  0,  74,  45), 'name': 'Dark Green'         },
+    297: {'rgb': (195, 151,  55), 'name': 'Pearl Gold'         },
+    308: {'rgb': ( 59,  24,  13), 'name': 'Dark Brown'         },
+    320: {'rgb': (127,  19,  27), 'name': 'Dark Red'           },
+    321: {'rgb': (  0, 163, 218), 'name': 'Dark Azure'         },
+    322: {'rgb': (  0, 190, 211), 'name': 'Medium Azure'       },
+    323: {'rgb': (193, 228, 218), 'name': 'Light Aqua'         },
+    326: {'rgb': (204, 225, 151), 'name': 'Yellowish Green'    },
+    329: {'rgb': (230, 237, 207), 'name': 'Glow In Dark White' },
+    330: {'rgb': (130, 131,  83), 'name': 'Olive Green'        },
+    378: {'rgb': (111, 148, 122), 'name': 'Sand Green'         },
+    379: {'rgb': (103, 130, 151), 'name': 'Sand Blue'          },
+    484: {'rgb': (166,  83,  34), 'name': 'Dark Orange'        }
 }
 
 def mosaic(input_img, size, colors, dither=1.0,
@@ -196,10 +197,10 @@ def mosaic(input_img, size, colors, dither=1.0,
                        (1,  1): 1/16}
     
     def scan1(y, x):
-        if len(colors) == 0:
+        if len(colors2) == 0:
             return
-        if len(colors) == 1:
-            output_arr[y, x, :3] = colors[0]
+        if len(colors2) == 1:
+            output_arr[y, x, :3] = colors2[0]
             return
         for i in (y+2,) if y else range(3):
             for j in (x+2,) if x else range(3):
@@ -215,7 +216,7 @@ def mosaic(input_img, size, colors, dither=1.0,
             i = tree_lab.query(rgb2lab(F[y, x]))[1]
             if dither > 0:
                 i = tree_rgb.query(F[y, x]*dither+colors_rgb[i]*(1-dither))[1]
-        output_arr[y, x, :3] = colors[i]
+        output_arr[y, x, :3] = colors2[i]
         if dampen > 0:
             F[y, x] += (fit_hull(F[y, x], colors_rgb, hull_rgb)-F[y, x]) * dampen
         o = F[y, x] - colors_rgb[i]
@@ -230,8 +231,9 @@ def mosaic(input_img, size, colors, dither=1.0,
     sx = ceil(input_img.size[0]/w)
     sy = ceil(input_img.size[1]/h)
     input_img = input_img.resize((w*sx, h*sy))
-    if len(colors) > 1:
-        colors_rgb = cctf_decoding(asarray(colors)/255)
+    colors2 = [color['rgb'] for color in colors.values()]
+    if len(colors2) > 1:
+        colors_rgb = cctf_decoding(asarray(colors2)/255)
         colors_lab = rgb2lab(colors_rgb)
         tree_rgb = KDTree(colors_rgb)
         tree_lab = KDTree(colors_lab)
@@ -288,7 +290,14 @@ def mosaic(input_img, size, colors, dither=1.0,
         root.destroy()
     return Image.fromarray(output_arr[..., :3])
 
-def save_studio(filename, img, part='plate'):
+def count(img, colors):
+    for color in colors.values():
+        print(f'{color["name"]:19} {all(asarray(img)==color["rgb"], axis=2).sum()}')
+
+def save_studio(filename, img, colors, part='plate'):
+    colors2 = {}
+    for color_id, color in colors.items():
+        colors2[color['rgb']] = color_id
     w, h = img.size
     z = h // 2 * 20 - 10
     match part:
@@ -298,7 +307,7 @@ def save_studio(filename, img, part='plate'):
         for i in range(h):
             x = 10 - w // 2 * 20
             for j in range(w):
-                color_id = colors[img.getpixel((j, i))]['id']
+                color_id = colors2[img.getpixel((j, i))]
                 f.write((f'1 {color_id} {x} -12 {z} 1 0 0 0 1 0 0 0 1 '
                          f'{part_id}.dat\r\n').encode())
                 x += 20
@@ -315,11 +324,12 @@ if __name__ == '__main__':
     input_img = Image.open(input_file)
     output_img = mosaic(input_img,
                         (width, height),
-                        list(colors),
+                        colors,
                         dither=dither,
                         pattern=pattern,
                         dampen=dampen,
                         animated=animated)
+    count(output_img, colors)
     if output_file:
         if '.' not in output_file:
             output_file += '.png'
@@ -327,9 +337,6 @@ if __name__ == '__main__':
     if output_io:
         if output_io[-3:] != '.io':
             output_io += '.io'
-        save_studio(output_io, output_img)
+        save_studio(output_io, output_img, colors)
     if result_scale > 0:
         output_img.resize((width*result_scale, height*result_scale), resample=0).show()
-    for color in colors:
-        i = (asarray(output_img).reshape((width*height, 3))==color).all(axis=1).sum()
-        print(f'{colors[color]["name"]:<20}x{i}')
