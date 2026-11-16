@@ -1,4 +1,4 @@
-__version__ = '261108a'
+__version__ = '261116a'
 __author__  = 'Haruka Yamaguchi'
 
 from math import ceil
@@ -16,7 +16,6 @@ from numpy import (all,
                    array,
                    array_equal,
                    asarray,
-                   average,
                    finfo,
                    linalg,
                    tile,
@@ -149,22 +148,22 @@ def mosaic(input_img, size, colors, dither=1.0,
     def scan0(y, x):
         if y < h and x < w:
             G = input_arr[y*sy:(y+1)*sy, x*sx:(x+1)*sx]
-            A[y, x] = average(G, axis=(0, 1))
-            B[y, x] = average(G**2, axis=(0, 1))
+            A[y, x] = G.mean(axis=(0, 1))
+            B[y, x] = (G**2).mean(axis=(0, 1))
             if y > 0 and x > 0:
                 H = A[y-1:y+1, x-1:x+1]
-                C[y, x] = average(H, axis=(0, 1))
+                C[y, x] = H.mean(axis=(0, 1))
                 I = C[y, x]**2
-                J = average(H**2, axis=(0, 1)) - I
+                J = (H**2).mean(axis=(0, 1)) - I
                 for i in range(3):
                     if J[i] >= 1e-6:
-                        K = average(B[y-1:y+1, x-1:x+1, i], axis=(0, 1)) - I[i]
+                        K = B[y-1:y+1, x-1:x+1, i].mean(axis=(0, 1)) - I[i]
                         D[y, x, i] = (K/J[i])**0.5
         if y == 0 or y > h or x == 0 or x > w:
             return
         K = C[y-1:y+1, x-1:x+1]
         L = D[y-1:y+1, x-1:x+1]
-        color = average(K, axis=(0, 1)) + average(L, axis=(0, 1)) * A[y-1, x-1] - average(K*L, axis=(0, 1))
+        color = K.mean(axis=(0, 1)) + L.mean(axis=(0, 1)) * A[y-1, x-1] - (K*L).mean(axis=(0, 1))
         if y == 1 or y == h:
             color *= 2
         if x == 1 or x == w:
@@ -291,8 +290,9 @@ def mosaic(input_img, size, colors, dither=1.0,
     return Image.fromarray(output_arr[..., :3])
 
 def count(img, colors):
+    name_width = max([len(color['name']) for color in colors.values()])
     for color in colors.values():
-        print(f'{color["name"]:19} {all(asarray(img)==color["rgb"], axis=2).sum()}')
+        print(f'{color["name"]:{name_width}} {all(asarray(img)==color["rgb"], axis=2).sum()}')
 
 def save_studio(filename, img, colors, part='plate'):
     colors2 = {}
