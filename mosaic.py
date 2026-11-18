@@ -1,4 +1,4 @@
-__version__ = '261116a'
+__version__ = '261118a'
 __author__  = 'Haruka Yamaguchi'
 
 from math import ceil
@@ -12,75 +12,15 @@ from colour import (cctf_decoding,
                     sRGB_to_XYZ,
                     XYZ_to_Oklab,
                     XYZ_to_sRGB)
-from numpy import (all,
-                   array,
-                   array_equal,
-                   asarray,
+from numpy import (asarray,
                    finfo,
                    linalg,
-                   tile,
                    zeros)
 from PIL import Image, ImageTk
 from scipy.spatial import ConvexHull, KDTree
 
-input_file   = 'C:/Users/User/Documents/Image.png'
-width        = 128
-height       = 96
-dither       = 1.0  # 0.0 ~ 1.0
-pattern      = None # 0.0 ~ 1.0, None
-dampen       = 0.5  # 0.0 ~ 1.0
-animated     = True
-result_scale = 10
-output_file  = ''
-output_io    = ''
-colors = {
-      0: {'rgb': (  0,   0,   0), 'name': 'Black'              },
-      1: {'rgb': (  0, 108, 183), 'name': 'Blue'               },
-      2: {'rgb': (  0, 146,  71), 'name': 'Green'              },
-      4: {'rgb': (221,  26,  33), 'name': 'Red'                },
-      5: {'rgb': (233,  93, 162), 'name': 'Dark Pink'          },
-     10: {'rgb': (  0, 175,  77), 'name': 'Bright Green'       },
-     14: {'rgb': (255, 205,   3), 'name': 'Yellow'             },
-     15: {'rgb': (244, 244, 244), 'name': 'White'              },
-     19: {'rgb': (221, 196, 142), 'name': 'Tan'                },
-     25: {'rgb': (245, 125,  32), 'name': 'Orange'             },
-     26: {'rgb': (181,  28, 125), 'name': 'Magenta'            },
-     27: {'rgb': (154, 202,  60), 'name': 'Lime'               },
-     28: {'rgb': (148, 126,  95), 'name': 'Dark Tan'           },
-     29: {'rgb': (246, 173, 205), 'name': 'Bright Pink'        },
-     30: {'rgb': (150, 117, 180), 'name': 'Medium Lavender'    },
-     31: {'rgb': (188, 166, 208), 'name': 'Lavender'           },
-     70: {'rgb': (105,  46,  20), 'name': 'Reddish Brown'      },
-     71: {'rgb': (160, 161, 159), 'name': 'Light Bluish Gray'  },
-     72: {'rgb': (100, 103, 101), 'name': 'Dark Bluish Gray'   },
-     73: {'rgb': ( 72, 158, 206), 'name': 'Medium Blue'        },
-     78: {'rgb': (252, 195, 158), 'name': 'Light Nougat'       },
-     84: {'rgb': (175, 116,  70), 'name': 'Medium Nougat'      },
-     85: {'rgb': ( 76,  47, 146), 'name': 'Dark Purple'        },
-     92: {'rgb': (222, 139,  95), 'name': 'Nougat'             },
-    148: {'rgb': ( 66,  66,  62), 'name': 'Pearl Dark Gray'    },
-    179: {'rgb': (135, 141, 143), 'name': 'Flat Silver'        },
-    191: {'rgb': (251, 171,  24), 'name': 'Bright Light Orange'},
-    212: {'rgb': (120, 191, 234), 'name': 'Bright Light Blue'  },
-    226: {'rgb': (255, 245, 121), 'name': 'Bright Light Yellow'},
-    272: {'rgb': (  0,  57,  94), 'name': 'Dark Blue'          },
-    288: {'rgb': (  0,  74,  45), 'name': 'Dark Green'         },
-    297: {'rgb': (195, 151,  55), 'name': 'Pearl Gold'         },
-    308: {'rgb': ( 59,  24,  13), 'name': 'Dark Brown'         },
-    320: {'rgb': (127,  19,  27), 'name': 'Dark Red'           },
-    321: {'rgb': (  0, 163, 218), 'name': 'Dark Azure'         },
-    322: {'rgb': (  0, 190, 211), 'name': 'Medium Azure'       },
-    323: {'rgb': (193, 228, 218), 'name': 'Light Aqua'         },
-    326: {'rgb': (204, 225, 151), 'name': 'Yellowish Green'    },
-    329: {'rgb': (230, 237, 207), 'name': 'Glow In Dark White' },
-    330: {'rgb': (130, 131,  83), 'name': 'Olive Green'        },
-    378: {'rgb': (111, 148, 122), 'name': 'Sand Green'         },
-    379: {'rgb': (103, 130, 151), 'name': 'Sand Blue'          },
-    484: {'rgb': (166,  83,  34), 'name': 'Dark Orange'        }
-}
-
-def mosaic(input_img, size, colors, dither=1.0,
-           pattern=None, dampen=0.5, animated=False):
+def mosaic(input_img, colors, size,
+           dither=1.0, pattern=-1.0, dampen=0.5, animated=False):
     
     def rgb2lab(x):
         return XYZ_to_Oklab(sRGB_to_XYZ(x, apply_cctf_decoding=False))
@@ -137,12 +77,12 @@ def mosaic(input_img, size, colors, dither=1.0,
         if len(colors) < 4:
             return fit_tri(x, colors)
         test = [*x, 1] @ hull.equations.T - finfo('d').eps
-        if all(test<0):
+        if (test<0).all():
             return x
         tris = hull.simplices[test>=0]
         if len(tris) == 1:
             return fit_tri(x, colors, tris[0])
-        points = array([fit_tri(x, colors, tri) for tri in tris])
+        points = asarray([fit_tri(x, colors, tri) for tri in tris])
         return points[linalg.norm(x-points, axis=1).argmin()]
     
     def scan0(y, x):
@@ -163,39 +103,25 @@ def mosaic(input_img, size, colors, dither=1.0,
             return
         K = C[y-1:y+1, x-1:x+1]
         L = D[y-1:y+1, x-1:x+1]
-        color = K.mean(axis=(0, 1)) + L.mean(axis=(0, 1)) * A[y-1, x-1] - (K*L).mean(axis=(0, 1))
+        color = K.mean(axis=(0, 1)) + L.mean(axis=(0, 1)) * A[y-1, x-1] - \
+                (K*L).mean(axis=(0, 1))
         if y == 1 or y == h:
             color *= 2
         if x == 1 or x == w:
             color *= 2
         color_lab = fit_hull(rgb2lab(color.clip(0, 1)), colors_lab, hull_lab)
         E[y, x] = fit_hull(lab2rgb(color_lab), colors_rgb, hull_rgb)
-        if y == 1:
-            if x == 1:
-                E[0, 0] = E[1, 1]
-            E[0, x] = E[1, x]
-            if x == w:
-                E[0, w+1] = E[1, w]
-        if x == 1:
-            E[y, 0] = E[y, 1]
-        if x == w:
-            E[y, w+1] = E[y, w]
-        if y == h:
-            if x == 1:
-                E[h+1, 0] = E[h, 1]
-            E[h+1, x] = E[h, x]
-            if x == w:
-                E[h+1, w+1] = E[h, w]
-    
-    bayer = array([[[ 3/3, -3/3, -1/3], [-1/3,  3/3, -1/3]],
-                   [[-1/3,  3/3, -1/3], [-1/3, -3/3,  3/3]]])
-    
-    floyd_steinberg = {(0,  1): 7/16,
-                       (1, -1): 3/16,
-                       (1,  0): 5/16,
-                       (1,  1): 1/16}
+        for i in range(y-int(y==1), y+int(y==h)+1):
+            for j in range(x-int(x==1), x+int(x==w)+1):
+                E[i, j] = E[y, x]
     
     def scan1(y, x):
+        bayer = asarray([[[   1, -1, -1/3], [-1/3,  1, -1/3]],
+                         [[-1/3,  1, -1/3], [-1/3, -1,    1]]])
+        floyd_steinberg = {(0,  1): 7/16,
+                           (1, -1): 3/16,
+                           (1,  0): 5/16,
+                           (1,  1): 1/16}
         if len(colors2) == 0:
             return
         if len(colors2) == 1:
@@ -217,7 +143,8 @@ def mosaic(input_img, size, colors, dither=1.0,
                 i = tree_rgb.query(F[y, x]*dither+colors_rgb[i]*(1-dither))[1]
         output_arr[y, x, :3] = colors2[i]
         if dampen > 0:
-            F[y, x] += (fit_hull(F[y, x], colors_rgb, hull_rgb)-F[y, x]) * dampen
+            F[y, x] += (fit_hull(F[y, x], colors_rgb, hull_rgb)-F[y, x]) * \
+                       dampen
         o = F[y, x] - colors_rgb[i]
         for (dy, dx), p in floyd_steinberg.items():
             if y + dy < 0 or y + dy >= h or x + dx < 0 or x + dx >= w:
@@ -238,7 +165,7 @@ def mosaic(input_img, size, colors, dither=1.0,
         tree_lab = KDTree(colors_lab)
         hull_rgb = ConvexHull(colors_rgb) if len(colors) > 3 else None
         hull_lab = ConvexHull(colors_lab) if len(colors) > 3 else None
-    if pattern is None:
+    if pattern < 0:
         pattern = dither
     input_arr = cctf_decoding(asarray(input_img)/255)
     A = zeros((h  , w  , 3))
@@ -247,16 +174,15 @@ def mosaic(input_img, size, colors, dither=1.0,
     D = zeros((h+1, w+1, 3))
     E = zeros((h+2, w+2, 3))
     F = zeros((h  , w  , 3))
-    output_arr = tile(array([255, 0, 255, 0], dtype='B'), (h, w, 1))
+    output_arr = asarray((((255, 0, 255, 0),),), dtype='B').repeat(w, axis=1) \
+                 .repeat(h, axis=0)
     output_arr[0, 0, 3] = 255
     if animated:
         root = Tk()
         root.state('zoomed')
         root.title('Mosaic')
-        canvas = Canvas(root,
-                        height=root.winfo_screenheight(),
-                        highlightthickness=0,
-                        width=root.winfo_screenwidth())
+        canvas = Canvas(root, height=root.winfo_screenheight(),
+                        highlightthickness=0, width=root.winfo_screenwidth())
         canvas.pack()
         root.update()
         s = min(canvas.winfo_width()/w, canvas.winfo_height()/h)
@@ -280,7 +206,8 @@ def mosaic(input_img, size, colors, dither=1.0,
             elif y < h - 1:
                 output_arr[y+1, 0, 3] = 255
             if i > (time() - t) * 300:
-                img1 = Image.fromarray(output_arr).resize(img0.size, resample=0)
+                img1 = Image.fromarray(output_arr) \
+                       .resize(img0.size, resample=0)
                 tkimg1 = ImageTk.PhotoImage(img1)
                 canvas.itemconfig(id1, image=tkimg1)
                 root.update()
@@ -292,9 +219,10 @@ def mosaic(input_img, size, colors, dither=1.0,
 def count(img, colors):
     name_width = max([len(color['name']) for color in colors.values()])
     for color in colors.values():
-        print(f'{color["name"]:{name_width}} {all(asarray(img)==color["rgb"], axis=2).sum()}')
+        print(f'{color["name"]:{name_width}}',
+              f'{(asarray(img)==color["rgb"]).all(axis=2).sum()}')
 
-def save_studio(filename, img, colors, part='plate'):
+def save_io(img, colors, filename, part='plate'):
     colors2 = {}
     for color_id, color in colors.items():
         colors2[color['rgb']] = color_id
@@ -320,23 +248,75 @@ def save_studio(filename, img, colors, part='plate'):
     remove('thumbnail.png')
 
 if __name__ == '__main__':
-    print(f'mosaic.py ({__version__})')
+    print(f'mosaic.py({__version__})')
+    input_file = 'C:/Users/User/Documents/Image.png'
     input_img = Image.open(input_file)
-    output_img = mosaic(input_img,
-                        (width, height),
-                        colors,
-                        dither=dither,
-                        pattern=pattern,
-                        dampen=dampen,
-                        animated=animated)
+    colors = {
+          0: {'rgb': (  0,   0,   0), 'name': 'Black'              },
+          1: {'rgb': (  0, 108, 183), 'name': 'Blue'               },
+          2: {'rgb': (  0, 146,  71), 'name': 'Green'              },
+          4: {'rgb': (221,  26,  33), 'name': 'Red'                },
+          5: {'rgb': (233,  93, 162), 'name': 'Dark Pink'          },
+         10: {'rgb': (  0, 175,  77), 'name': 'Bright Green'       },
+         14: {'rgb': (255, 205,   3), 'name': 'Yellow'             },
+         15: {'rgb': (244, 244, 244), 'name': 'White'              },
+         19: {'rgb': (221, 196, 142), 'name': 'Tan'                },
+         25: {'rgb': (245, 125,  32), 'name': 'Orange'             },
+         26: {'rgb': (181,  28, 125), 'name': 'Magenta'            },
+         27: {'rgb': (154, 202,  60), 'name': 'Lime'               },
+         28: {'rgb': (148, 126,  95), 'name': 'Dark Tan'           },
+         29: {'rgb': (246, 173, 205), 'name': 'Bright Pink'        },
+         30: {'rgb': (150, 117, 180), 'name': 'Medium Lavender'    },
+         31: {'rgb': (188, 166, 208), 'name': 'Lavender'           },
+         70: {'rgb': (105,  46,  20), 'name': 'Reddish Brown'      },
+         71: {'rgb': (160, 161, 159), 'name': 'Light Bluish Gray'  },
+         72: {'rgb': (100, 103, 101), 'name': 'Dark Bluish Gray'   },
+         73: {'rgb': ( 72, 158, 206), 'name': 'Medium Blue'        },
+         78: {'rgb': (252, 195, 158), 'name': 'Light Nougat'       },
+         84: {'rgb': (175, 116,  70), 'name': 'Medium Nougat'      },
+         85: {'rgb': ( 76,  47, 146), 'name': 'Dark Purple'        },
+         92: {'rgb': (222, 139,  95), 'name': 'Nougat'             },
+        148: {'rgb': ( 66,  66,  62), 'name': 'Pearl Dark Gray'    },
+        179: {'rgb': (135, 141, 143), 'name': 'Flat Silver'        },
+        191: {'rgb': (251, 171,  24), 'name': 'Bright Light Orange'},
+        212: {'rgb': (120, 191, 234), 'name': 'Bright Light Blue'  },
+        226: {'rgb': (255, 245, 121), 'name': 'Bright Light Yellow'},
+        272: {'rgb': (  0,  57,  94), 'name': 'Dark Blue'          },
+        288: {'rgb': (  0,  74,  45), 'name': 'Dark Green'         },
+        297: {'rgb': (195, 151,  55), 'name': 'Pearl Gold'         },
+        308: {'rgb': ( 59,  24,  13), 'name': 'Dark Brown'         },
+        320: {'rgb': (127,  19,  27), 'name': 'Dark Red'           },
+        321: {'rgb': (  0, 163, 218), 'name': 'Dark Azure'         },
+        322: {'rgb': (  0, 190, 211), 'name': 'Medium Azure'       },
+        323: {'rgb': (193, 228, 218), 'name': 'Light Aqua'         },
+        326: {'rgb': (204, 225, 151), 'name': 'Yellowish Green'    },
+        329: {'rgb': (230, 237, 207), 'name': 'Glow In Dark White' },
+        330: {'rgb': (130, 131,  83), 'name': 'Olive Green'        },
+        378: {'rgb': (111, 148, 122), 'name': 'Sand Green'         },
+        379: {'rgb': (103, 130, 151), 'name': 'Sand Blue'          },
+        484: {'rgb': (166,  83,  34), 'name': 'Dark Orange'        }
+        }
+    width        = 128
+    height       = 96
+    size         = width, height
+    dither       =  1.0 # 0.0 ~ 1.0
+    pattern      = -1.0 # -1.0, 0.0 ~ 1.0
+    dampen       =  0.5 # 0.0 ~ 1.0
+    animated     = True
+    output_file  = ''
+    output_io    = ''
+    result_scale = 10
+    output_img = mosaic(input_img, colors, size, dither=dither,
+                        pattern=pattern, dampen=dampen, animated=animated)
     count(output_img, colors)
     if output_file:
         if '.' not in output_file:
             output_file += '.png'
         output_img.save(output_file)
     if output_io:
-        if output_io[-3:] != '.io':
+        if not output_io.endswith('.io'):
             output_io += '.io'
-        save_studio(output_io, output_img, colors)
+        save_io(output_img, colors, output_io)
     if result_scale > 0:
-        output_img.resize((width*result_scale, height*result_scale), resample=0).show()
+        output_img.resize((width*result_scale, height*result_scale),
+                          resample=0).show()
